@@ -1,12 +1,15 @@
 import UIKit
 
 class ViewController: UIViewController {
-    var password = ""
-    @IBOutlet weak var button: UIButton!
-    @IBOutlet weak var label: UILabel!
-    @IBOutlet weak var button2: UIButton!
-    @IBOutlet weak var textField: UITextField!
+    
+    // MARK: - Element
+    @IBOutlet weak var generatedPasswordTextField: UITextField!
+    @IBOutlet weak var crackedPasswordLabel: UILabel!
+    @IBOutlet weak var generatedPasswordButton: UIButton!
+    @IBOutlet weak var crackedPasswordButton: UIButton!
+    @IBOutlet weak var changeBackgroundButton: UIButton!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    private var lengthPassword = 35
     
     var isBlack: Bool = false {
         didSet {
@@ -18,56 +21,53 @@ class ViewController: UIViewController {
         }
     }
     
-    @IBAction func onBut(_ sender: Any) {
-        isBlack.toggle()
-    }
+    private var password = ""
     
-    @IBAction func onBut2(_ sender: Any) {
-        let queue = OperationQueue()
-        let blockOperationGenPassword = BlockOperation {
-            self.generationBruteForce()
-            
-            OperationQueue.main.addOperation {
-                self.textField.text = self.password
-            }
-        }
-
-        let blockOperationSelectPassword =  BlockOperation {
-            OperationQueue.main.addOperation {
-                self.activityIndicator.startAnimating()
-            }
-            
-            let password = self.bruteForce(passwordToUnlock: self.password)
-            print("selectionPassword: \(password)")
-            
-            OperationQueue.main.addOperation {
-                self.label.text = password
-                self.label.textColor = .black
-                self.textField.isSecureTextEntry = false
-                self.activityIndicator.stopAnimating()
-                self.activityIndicator.hidesWhenStopped = true
-            }
-        }
-        blockOperationSelectPassword.addDependency(blockOperationGenPassword)
-        
-        queue.addOperations([blockOperationGenPassword, blockOperationSelectPassword], waitUntilFinished: false)
-    }
+    // MARK: - Lifestyle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        textField.isSecureTextEntry = true
+        generatedPasswordTextField.isSecureTextEntry = true
+        activityIndicator.hidesWhenStopped = true
+    }
+        
+    // MARK: - Action
+    
+    @IBAction func onChangeBackground(_ sender: Any) {
+        isBlack.toggle()
+    }
+    
+    @IBAction func onHackPassword(_ sender: Any) {
+        self.activityIndicator.startAnimating()
+        let queue = DispatchQueue(label: "queue", qos: .background, attributes: .concurrent)
+        var hackPassword = ""
+        for i in self.password {
+            let dispatchWorkItem = DispatchWorkItem {
+                hackPassword.append(self.bruteForce(passwordToUnlock: String(i)))
+            }
+            queue.asyncAndWait(execute: dispatchWorkItem)
+        }
+        crackedPasswordLabel.text = hackPassword
+        generatedPasswordTextField.isSecureTextEntry = false
+        activityIndicator.stopAnimating()
         activityIndicator.hidesWhenStopped = true
     }
     
-    func generationBruteForce() {
-        let ALLOWED_CHARACTERS:   [String] = String().printable.map { String($0) }
-        var index = 0
-        
-        while index != 12345 {
-            self.password  = generateBruteForce(password, fromArray: ALLOWED_CHARACTERS)
-            print("\(index): \(self.password)")
-            index += 1
+    @IBAction func onGeneratedPssword(_ sender: Any) {
+        password = self.generatedPassword()
+        generatedPasswordTextField.text = self.password
+    }
+    
+    // MARK: - Private func
+    
+    func generatedPassword() -> String {
+        let ALLOWED_CHARACTERS: [String] = String().printable.map { String($0) }
+        var password = ""
+        for _ in 0...self.lengthPassword {
+            password.append(generateBruteForce(ALLOWED_CHARACTERS.randomElement()!, fromArray: ALLOWED_CHARACTERS))
         }
+        
+        return password
     }
     
     func bruteForce(passwordToUnlock: String) -> String {
@@ -78,11 +78,12 @@ class ViewController: UIViewController {
         // Will strangely ends at 0000 instead of ~~~
         while password != passwordToUnlock { // Increase MAXIMUM_PASSWORD_SIZE value for more
             password = generateBruteForce(password, fromArray: ALLOWED_CHARACTERS)
-    //             Your stuff here
+    //           Your stuff here
             print(password)
             // Your stuff here
         }
-        
+            
+        print(password)
         return password
     }
 }
